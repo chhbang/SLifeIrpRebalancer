@@ -9,7 +9,31 @@ namespace SLifeIrpRebalancer.Core.Parsing;
 /// </summary>
 public sealed class AssetManagerResolver
 {
-    private const string SamsungLifeFallback = "삼성생명";
+    /// <summary>
+    /// Asset-manager value the resolver assigns to Samsung Life Insurance Co., Ltd.'s own
+    /// principal-guaranteed products (unprefixed names like "이율보증형(3년)"). The HTML span
+    /// for Samsung Life-managed funds (S Selection, 삼성그룹주식형, 인덱스주식형 등) instead
+    /// reads "삼성생명보험" verbatim — both strings refer to the same legal entity, so use
+    /// <see cref="IsSamsungLifeInsurance"/> rather than equality against this constant when
+    /// matching across the PG/fund split.
+    /// Affiliates like 삼성자산운용 (Samsung Asset Management — a separate legal entity) do NOT count.
+    /// </summary>
+    public const string SamsungLifeInsurance = "삼성생명";
+
+    private const string SamsungLifeFallback = SamsungLifeInsurance;
+
+    /// <summary>
+    /// Returns true if the given <paramref name="assetManager"/> string designates Samsung Life
+    /// Insurance itself (the entity that qualifies for the lifelong-annuity payout) — covers both
+    /// the HTML fund span "삼성생명보험" and the resolver fallback "삼성생명". Affiliate strings
+    /// like "삼성자산운용" return false.
+    /// </summary>
+    public static bool IsSamsungLifeInsurance(string? assetManager)
+    {
+        if (string.IsNullOrWhiteSpace(assetManager)) return false;
+        var trimmed = assetManager.Trim();
+        return trimmed == "삼성생명" || trimmed == "삼성생명보험";
+    }
 
     private static readonly string[] KnownPrefixes =
     [

@@ -27,6 +27,9 @@ public partial class DataPreparationViewModel : ObservableObject
     private string _periodSummary = "수익률 기간: (없음)";
 
     [ObservableProperty]
+    private string _samsungLifeSummary = string.Empty;
+
+    [ObservableProperty]
     private bool _hasCatalog;
 
     [ObservableProperty]
@@ -155,6 +158,15 @@ public partial class DataPreparationViewModel : ObservableObject
         PeriodSummary = catalog.FundReturnPeriods.Count == 0
             ? "수익률 기간: (없음)"
             : "수익률 기간: " + string.Join(", ", catalog.FundReturnPeriods.Select(p => p.ToKoreanLabel()));
+
+        // Count of products run by 삼성생명보험주식회사 itself (not 삼성자산운용 etc.) —
+        // this is the set eligible for the lifelong-annuity-payout option. Includes both PG
+        // products and Samsung Life-managed funds like S Selection / 삼성그룹주식형 / 인덱스주식형.
+        var samsungPg = catalog.PrincipalGuaranteed.Count(p => AssetManagerResolver.IsSamsungLifeInsurance(p.AssetManager));
+        var samsungFunds = catalog.Funds.Count(f => AssetManagerResolver.IsSamsungLifeInsurance(f.AssetManager));
+        SamsungLifeSummary = HasCatalog
+            ? $"삼성생명보험주식회사 상품: 원리금보장형 {samsungPg}건, 펀드 {samsungFunds}건  (종신형 연금 옵션 활성 시 추천 후보 한정)"
+            : string.Empty;
     }
 
     private static IReadOnlyList<ReturnPeriod> AllPeriodsForCsv(ProductCatalog catalog)

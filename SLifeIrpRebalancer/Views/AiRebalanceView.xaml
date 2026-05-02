@@ -44,6 +44,10 @@
                 IsEnabled="{x:Bind ViewModel.CanGenerate, Mode=OneWay}"
                 Style="{StaticResource AccentButtonStyle}" />
             <Button
+                x:Name="PreviewPromptButton"
+                Content="프롬프트 미리보기"
+                Click="PreviewPromptButton_Click" />
+            <Button
                 x:Name="ExportPdfButton"
                 Content="PDF로 내보내기"
                 Click="ExportPdfButton_Click"

@@ -45,6 +45,65 @@ public sealed partial class AiRebalanceView : Page
         await ViewModel.GenerateProposalAsync();
     }
 
+    private async void PreviewPromptButton_Click(object sender, RoutedEventArgs e)
+    {
+        var prompt = ViewModel.BuildPromptPreview();
+
+        var systemBox = new TextBox
+        {
+            Text = prompt.SystemPrompt,
+            IsReadOnly = true,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas, Malgun Gothic"),
+            MinHeight = 80,
+        };
+        var userBox = new TextBox
+        {
+            Text = prompt.UserPrompt,
+            IsReadOnly = true,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas, Malgun Gothic"),
+        };
+        ScrollViewer.SetVerticalScrollBarVisibility(userBox, ScrollBarVisibility.Auto);
+
+        var content = new StackPanel { Spacing = 8 };
+        content.Children.Add(new TextBlock { Text = "System Prompt", Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"] });
+        content.Children.Add(systemBox);
+        content.Children.Add(new TextBlock { Text = "User Prompt", Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"], Margin = new Thickness(0, 8, 0, 0) });
+        content.Children.Add(userBox);
+
+        var scroll = new ScrollViewer
+        {
+            Content = content,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Padding = new Thickness(0, 0, 12, 0),
+        };
+
+        var dialog = new ContentDialog
+        {
+            Title = "API로 전송될 프롬프트 미리보기",
+            Content = scroll,
+            CloseButtonText = "닫기",
+            PrimaryButtonText = "User Prompt 복사",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = this.XamlRoot,
+        };
+        dialog.Resources["ContentDialogMaxWidth"] = 1100.0;
+        dialog.Resources["ContentDialogMaxHeight"] = 800.0;
+        dialog.PrimaryButtonClick += (_, args) =>
+        {
+            var dp = new Windows.ApplicationModel.DataTransfer.DataPackage();
+            dp.SetText(prompt.UserPrompt);
+            Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(dp);
+            args.Cancel = true; // keep dialog open after copy
+        };
+
+        await dialog.ShowAsync();
+    }
+
     private async void ExportPdfButton_Click(object sender, RoutedEventArgs e)
     {
         if (App.Window is null) return;

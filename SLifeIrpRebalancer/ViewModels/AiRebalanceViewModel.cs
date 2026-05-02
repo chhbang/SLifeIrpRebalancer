@@ -26,9 +26,6 @@ public sealed partial class AiRebalanceViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(CanExportPdf))]
     private bool _isBusy;
 
-    [ObservableProperty]
-    private string _lastPromptPreview = string.Empty;
-
     /// <summary>Provider+model used for the current response, captured at request time so the PDF metadata stays accurate.</summary>
     private string _lastProviderName = string.Empty;
     private string _lastModelId = string.Empty;
@@ -37,6 +34,21 @@ public sealed partial class AiRebalanceViewModel : ObservableObject
     public bool HasResponse => !string.IsNullOrWhiteSpace(AiResponse);
     public bool CanGenerate => !IsBusy;
     public bool CanExportPdf => !IsBusy && HasResponse;
+
+    /// <summary>
+    /// Builds the prompt that <em>would</em> be sent for the current inputs, for previewing.
+    /// No validation — PromptBuilder gracefully handles empty account / null catalog / missing
+    /// execution date by emitting placeholder lines, and the preview should reflect that exact output.
+    /// </summary>
+    public PromptOutput BuildPromptPreview()
+    {
+        var settings = AppState.Instance.Settings;
+        return PromptBuilder.Build(new PromptInput(
+            AppState.Instance.Catalog,
+            AppState.Instance.Account,
+            settings.RestrictToSamsungLifeForLifelongAnnuity,
+            UserQuery));
+    }
 
     public async Task GenerateProposalAsync(CancellationToken cancellationToken = default)
     {
@@ -73,7 +85,6 @@ public sealed partial class AiRebalanceViewModel : ObservableObject
                 account,
                 settings.RestrictToSamsungLifeForLifelongAnnuity,
                 UserQuery));
-            LastPromptPreview = prompt.UserPrompt;
 
             var client = AiClientFactory.Create(settings.AiProvider, apiKey, settings.GetActiveModel());
             _lastProviderName = client.ProviderName;

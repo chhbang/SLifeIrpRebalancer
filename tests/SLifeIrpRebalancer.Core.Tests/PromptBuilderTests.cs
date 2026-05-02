@@ -77,12 +77,15 @@ public class PromptBuilderTests
     }
 
     [Fact]
-    public void Build_LifelongAnnuity_IncludesManagerConstraint()
+    public void Build_LifelongAnnuity_IncludesStrictManagerConstraint()
     {
         var output = PromptBuilder.Build(new PromptInput(null, SampleAccount(), RestrictToSamsungLifeForLifelongAnnuity: true, ""));
 
         Assert.Contains("운용사 제약", output.UserPrompt);
-        Assert.Contains("삼성생명", output.UserPrompt);
+        Assert.Contains("삼성생명보험주식회사", output.UserPrompt);
+        // The constraint must explicitly call out Samsung affiliates as a separate legal entity
+        // — they don't qualify for the lifelong-annuity payout.
+        Assert.Contains("삼성자산운용", output.UserPrompt);
     }
 
     [Fact]

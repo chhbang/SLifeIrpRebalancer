@@ -77,6 +77,10 @@
                 Text="{x:Bind ViewModel.PeriodSummary, Mode=OneWay}"
                 Style="{StaticResource CaptionTextBlockStyle}"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <TextBlock
+                Text="{x:Bind ViewModel.SamsungLifeSummary, Mode=OneWay}"
+                Style="{StaticResource CaptionTextBlockStyle}"
+                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
         </StackPanel>
 
         <TabView
