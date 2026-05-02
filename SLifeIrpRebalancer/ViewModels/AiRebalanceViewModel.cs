@@ -43,9 +43,10 @@ public sealed partial class AiRebalanceViewModel : ObservableObject
         if (IsBusy) return;
 
         var settings = AppState.Instance.Settings;
-        if (string.IsNullOrWhiteSpace(settings.ApiKey))
+        var apiKey = settings.GetActiveApiKey();
+        if (string.IsNullOrWhiteSpace(apiKey))
         {
-            StatusMessage = "환경 설정 화면에서 API Key를 먼저 입력해주세요.";
+            StatusMessage = $"환경 설정 화면에서 \"{settings.AiProvider}\" API Key를 먼저 입력해주세요.";
             return;
         }
 
@@ -74,12 +75,13 @@ public sealed partial class AiRebalanceViewModel : ObservableObject
                 UserQuery));
             LastPromptPreview = prompt.UserPrompt;
 
-            var client = AiClientFactory.Create(settings.AiProvider, settings.ApiKey);
+            var client = AiClientFactory.Create(settings.AiProvider, apiKey, settings.GetActiveModel());
             _lastProviderName = client.ProviderName;
             _lastModelId = client.ModelId;
-            StatusMessage = $"{client.ProviderName} ({client.ModelId}) 호출 중... 응답까지 1~3분 정도 걸릴 수 있습니다.";
+            StatusMessage = $"{client.ProviderName} ({client.ModelId}, 사고 수준: {settings.ThinkingLevel.ToKoreanLabel()}) 호출 중... 응답까지 1~3분 정도 걸릴 수 있습니다.";
 
-            var response = await client.GenerateAsync(prompt.SystemPrompt, prompt.UserPrompt, cancellationToken);
+            var aiRequest = new AiRequest(prompt.SystemPrompt, prompt.UserPrompt, settings.ThinkingLevel);
+            var response = await client.GenerateAsync(aiRequest, cancellationToken);
             AiResponse = response;
             _lastResponseAt = DateTime.Now;
             StatusMessage = $"{client.ProviderName} 응답 완료. 마크다운으로 표시됩니다. PDF로 저장 가능합니다.";
