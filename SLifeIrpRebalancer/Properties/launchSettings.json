@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "SLifeIrpRebalancer (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "SLifeIrpRebalancer (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

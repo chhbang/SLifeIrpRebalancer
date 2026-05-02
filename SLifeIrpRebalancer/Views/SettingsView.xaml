@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="SLifeIrpRebalancer.Views.SettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <ScrollViewer Padding="32">
+        <StackPanel Spacing="24" MaxWidth="640" HorizontalAlignment="Left">
+            <TextBlock Text="환경 설정" Style="{StaticResource TitleTextBlockStyle}" />
+
+            <TextBlock
+                Style="{StaticResource BodyTextBlockStyle}"
+                TextWrapping="Wrap"
+                Text="AI 서비스 선택, API Key, 연금 개시 옵션을 설정합니다. 변경 내용은 즉시 자동 저장되어 다음 실행에도 유지됩니다." />
+
+            <RadioButtons
+                Header="AI 공급자 *"
+                SelectedIndex="{x:Bind ViewModel.ProviderIndex, Mode=TwoWay}"
+                MaxColumns="3">
+                <x:String>Claude</x:String>
+                <x:String>Gemini</x:String>
+                <x:String>GPT</x:String>
+            </RadioButtons>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="API Key *" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <PasswordBox
+                    x:Name="ApiKeyBox"
+                    Width="480"
+                    PlaceholderText="해당 공급자의 API Key 입력"
+                    PasswordChanged="ApiKeyBox_PasswordChanged" />
+                <TextBlock
+                    Text="API Key는 Windows LocalSettings에 평문으로 저장됩니다. 공용 PC라면 사용을 피해주세요."
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    TextWrapping="Wrap" />
+            </StackPanel>
+
+            <CheckBox
+                Content="연금 개시 시 종신형 수령 예정 (삼성생명 운용사 상품으로 제한)"
+                IsChecked="{x:Bind ViewModel.RestrictToSamsungLifeForLifelongAnnuity, Mode=TwoWay}" />
+        </StackPanel>
+    </ScrollViewer>
+</Page>

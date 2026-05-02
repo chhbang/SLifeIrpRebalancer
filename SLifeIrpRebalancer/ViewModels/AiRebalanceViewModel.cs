@@ -1,0 +1,134 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.ComponentModel;
+using SLifeIrpRebalancer.Core.Ai;
+using SLifeIrpRebalancer.Core.Models;
+using SLifeIrpRebalancer.Core.Pdf;
+using SLifeIrpRebalancer.Services;
+
+namespace SLifeIrpRebalancer.ViewModels;
+
+public sealed partial class AiRebalanceViewModel : ObservableObject
+{
+    [ObservableProperty]
+    private string _userQuery = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasResponse))]
+    private string _aiResponse = string.Empty;
+
+    [ObservableProperty]
+    private string _statusMessage = "포트폴리오 제안 받기 버튼을 누르면 입력된 정보가 AI에게 전달됩니다.";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanGenerate))]
+    [NotifyPropertyChangedFor(nameof(CanExportPdf))]
+    private bool _isBusy;
+
+    [ObservableProperty]
+    private string _lastPromptPreview = string.Empty;
+
+    /// <summary>Provider+model used for the current response, captured at request time so the PDF metadata stays accurate.</summary>
+    private string _lastProviderName = string.Empty;
+    private string _lastModelId = string.Empty;
+    private DateTime _lastResponseAt;
+
+    public bool HasResponse => !string.IsNullOrWhiteSpace(AiResponse);
+    public bool CanGenerate => !IsBusy;
+    public bool CanExportPdf => !IsBusy && HasResponse;
+
+    public async Task GenerateProposalAsync(CancellationToken cancellationToken = default)
+    {
+        if (IsBusy) return;
+
+        var settings = AppState.Instance.Settings;
+        if (string.IsNullOrWhiteSpace(settings.ApiKey))
+        {
+            StatusMessage = "환경 설정 화면에서 API Key를 먼저 입력해주세요.";
+            return;
+        }
+
+        var account = AppState.Instance.Account;
+        if (account.TotalAmount <= 0 || account.OwnedItems.Count == 0)
+        {
+            StatusMessage = "내 계좌 정보 화면에서 총 적립금과 보유 상품을 먼저 입력해주세요.";
+            return;
+        }
+
+        if (account.RebalanceTiming == RebalanceTiming.MaturityReservation
+            && !account.ExecutionDate.HasValue)
+        {
+            StatusMessage = "만기 예약용 리밸런싱은 실행 날짜를 입력해야 합니다 (매도 대상 화면).";
+            return;
+        }
+
+        IsBusy = true;
+        AiResponse = string.Empty;
+        try
+        {
+            var prompt = PromptBuilder.Build(new PromptInput(
+                AppState.Instance.Catalog,
+                account,
+                settings.RestrictToSamsungLifeForLifelongAnnuity,
+                UserQuery));
+            LastPromptPreview = prompt.UserPrompt;
+
+            var client = AiClientFactory.Create(settings.AiProvider, settings.ApiKey);
+            _lastProviderName = client.ProviderName;
+            _lastModelId = client.ModelId;
+            StatusMessage = $"{client.ProviderName} ({client.ModelId}) 호출 중... 응답까지 1~3분 정도 걸릴 수 있습니다.";
+
+            var response = await client.GenerateAsync(prompt.SystemPrompt, prompt.UserPrompt, cancellationToken);
+            AiResponse = response;
+            _lastResponseAt = DateTime.Now;
+            StatusMessage = $"{client.ProviderName} 응답 완료. 마크다운으로 표시됩니다. PDF로 저장 가능합니다.";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "요청이 취소되었습니다.";
+        }
+        catch (AiClientException ex)
+        {
+            StatusMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"예상치 못한 오류: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task ExportPdfAsync(string filePath)
+    {
+        if (!HasResponse)
+        {
+            StatusMessage = "내보낼 응답이 없습니다.";
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            var report = new PdfReport(
+                GeneratedAt: _lastResponseAt == default ? DateTime.Now : _lastResponseAt,
+                ProviderName: string.IsNullOrEmpty(_lastProviderName) ? AppState.Instance.Settings.AiProvider : _lastProviderName,
+                ModelId: string.IsNullOrEmpty(_lastModelId) ? "(미지정)" : _lastModelId,
+                Account: AppState.Instance.Account,
+                AiResponseMarkdown: AiResponse);
+            await Task.Run(() => PdfExporter.Export(filePath, report));
+            StatusMessage = $"PDF 저장 완료: {filePath}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"PDF 저장 오류: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+}
