@@ -34,6 +34,7 @@ public sealed partial class MainWindow : Window
             "MyAccount" => typeof(MyAccountView),
             "SellTargets" => typeof(SellTargetsView),
             "AiRebalance" => typeof(AiRebalanceView),
+            "About" => typeof(AboutView),
             _ => null,
         };
 
