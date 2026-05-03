@@ -14,6 +14,12 @@ public sealed class AccountStatusModel
     /// </summary>
     public DateOnly? ExecutionDate { get; set; }
 
+    /// <summary>
+    /// 사용자가 계획하는 다음 리밸런싱까지의 간격. AI가 펀드 변동성 허용치와 어느 수익률 기간을
+    /// 더 비중 있게 볼지 판단하는 데 사용됩니다. 기본값은 중간값인 6개월.
+    /// </summary>
+    public RebalanceCycle RebalanceCycle { get; set; } = RebalanceCycle.SixMonths;
+
     /// <summary>Subscriber's current age in years. Drives the AI's time-horizon and risk-budget reasoning.</summary>
     public int? CurrentAge { get; set; }
 

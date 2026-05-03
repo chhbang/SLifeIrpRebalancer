@@ -48,6 +48,33 @@ public sealed partial class SellTargetsViewModel : ObservableObject
     public bool IsExecutionDateRequired => Account.RebalanceTiming == RebalanceTiming.MaturityReservation;
 
     /// <summary>
+    /// 0 = 3개월, 1 = 6개월, 2 = 1년. 기본값 6개월(중간)이 모델 기본과 일치합니다.
+    /// </summary>
+    public int CycleIndex
+    {
+        get => Account.RebalanceCycle switch
+        {
+            RebalanceCycle.ThreeMonths => 0,
+            RebalanceCycle.SixMonths => 1,
+            RebalanceCycle.OneYear => 2,
+            _ => 1,
+        };
+        set
+        {
+            var next = value switch
+            {
+                0 => RebalanceCycle.ThreeMonths,
+                2 => RebalanceCycle.OneYear,
+                _ => RebalanceCycle.SixMonths,
+            };
+            if (Account.RebalanceCycle == next) return;
+            Account.RebalanceCycle = next;
+            OnPropertyChanged();
+            AppState.Instance.SaveAccount();
+        }
+    }
+
+    /// <summary>
     /// Bound to <see cref="Microsoft.UI.Xaml.Controls.CalendarDatePicker.Date"/> which uses DateTimeOffset?.
     /// We store the underlying value as a calendar-only <see cref="DateOnly"/>.
     /// </summary>

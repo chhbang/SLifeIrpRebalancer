@@ -186,6 +186,42 @@ public class PromptBuilderTests
     }
 
     [Fact]
+    public void Build_DefaultCycle_RendersSixMonthSection()
+    {
+        // SampleAccount doesn't set RebalanceCycle explicitly, so the model default (SixMonths) applies.
+        var output = PromptBuilder.Build(new PromptInput(null, SampleAccount(), ""));
+
+        Assert.Contains("## 리밸런싱 주기", output.UserPrompt);
+        Assert.Contains("**6개월**", output.UserPrompt);
+    }
+
+    [Fact]
+    public void Build_ThreeMonthCycle_FlagsShortHorizonGuidance()
+    {
+        var account = SampleAccount();
+        account.RebalanceCycle = RebalanceCycle.ThreeMonths;
+
+        var output = PromptBuilder.Build(new PromptInput(null, account, ""));
+
+        Assert.Contains("**3개월**", output.UserPrompt);
+        // Short horizon should steer the AI toward shorter return columns and acknowledge noise risk.
+        Assert.Contains("1·3개월 수익률", output.UserPrompt);
+    }
+
+    [Fact]
+    public void Build_OneYearCycle_FlagsLongHorizonGuidance()
+    {
+        var account = SampleAccount();
+        account.RebalanceCycle = RebalanceCycle.OneYear;
+
+        var output = PromptBuilder.Build(new PromptInput(null, account, ""));
+
+        Assert.Contains("**1년**", output.UserPrompt);
+        // Long horizon should steer toward longer-period signals and conservative volatility.
+        Assert.Contains("6개월·1년·3년", output.UserPrompt);
+    }
+
+    [Fact]
     public void Build_HoldingsTable_DistinguishesSellableFromLocked()
     {
         var output = PromptBuilder.Build(new PromptInput(null, SampleAccount(), ""));

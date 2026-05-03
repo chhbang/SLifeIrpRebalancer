@@ -29,6 +29,7 @@ public static class PromptBuilder
     {
         var sb = new StringBuilder();
         AppendTiming(sb, input.Account);
+        AppendCycle(sb, input.Account.RebalanceCycle);
         AppendSubscriberInfo(sb, input.Account);
         AppendManagerConstraintIfNeeded(sb, input.Account.WantsLifelongAnnuity);
         AppendAccountSummary(sb, input.Account);
@@ -93,6 +94,32 @@ public static class PromptBuilder
             else
                 sb.AppendLine("- 실행 예정일: (미지정 — 사용자가 입력하지 않았습니다)");
         }
+        sb.AppendLine();
+    }
+
+    private static void AppendCycle(StringBuilder sb, RebalanceCycle cycle)
+    {
+        sb.AppendLine("## 리밸런싱 주기");
+        var (label, focusPeriod, guidance) = cycle switch
+        {
+            RebalanceCycle.ThreeMonths => (
+                "3개월",
+                "3개월",
+                "비교적 짧은 주기로 점검 가능하므로 변동성이 큰 자산도 일정 비중까지는 허용 가능합니다. 펀드 평가 시 카탈로그의 1·3개월 수익률을 우선 참고하되, 단기 노이즈에 과적합되지 않도록 6개월 흐름과 함께 보십시오."),
+            RebalanceCycle.SixMonths => (
+                "6개월",
+                "6개월",
+                "중간 호흡의 주기입니다. 펀드 평가 시 카탈로그의 3·6개월 수익률을 핵심 신호로 보고, 1년 수익률은 추세 확인용 보조 지표로 활용하십시오. 변동성은 중간 수준까지 수용 가능합니다."),
+            RebalanceCycle.OneYear => (
+                "1년",
+                "1년",
+                "다음 점검까지 비교적 긴 시간이 흐릅니다. 단기 변동성에 큰 자산은 비중을 보수적으로 잡고, 카탈로그의 6개월·1년·3년 수익률 등 중장기 신호를 우선 참고하십시오."),
+            _ => ("(미지정)", "-", ""),
+        };
+        sb.AppendLine($"- 사용자가 계획하는 다음 리밸런싱까지의 간격: **{label}**");
+        sb.AppendLine($"- 우선 참고 수익률 기간: {focusPeriod}");
+        if (!string.IsNullOrEmpty(guidance))
+            sb.AppendLine($"- 운용 가이드: {guidance}");
         sb.AppendLine();
     }
 

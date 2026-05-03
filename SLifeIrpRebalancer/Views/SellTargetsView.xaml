@@ -26,6 +26,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -35,7 +36,7 @@
             Grid.Row="1"
             Style="{StaticResource BodyTextBlockStyle}"
             TextWrapping="Wrap"
-            Text="리밸런싱의 성격(즉시 vs 만기 예약)을 정하고, 절대 매도하면 안 되는 보유 상품의 매도 가능 체크를 해제합니다. 매도/매수 비중과 부분 매도 여부는 AI가 판단합니다." />
+            Text="리밸런싱의 성격(즉시 vs 만기 예약)과 다음 리밸런싱까지의 계획 주기를 정하고, 절대 매도하면 안 되는 보유 상품의 매도 가능 체크를 해제합니다. 매도/매수 비중과 부분 매도 여부는 AI가 판단합니다." />
 
         <RadioButtons
             Grid.Row="2"
@@ -59,13 +60,23 @@
                 Date="{x:Bind ViewModel.ExecutionDate, Mode=TwoWay}" />
         </StackPanel>
 
-        <TextBlock
+        <RadioButtons
             Grid.Row="4"
+            Header="다음 리밸런싱까지 계획 주기 * (AI가 펀드 변동성 허용치와 참고할 수익률 기간을 판단하는 데 사용)"
+            SelectedIndex="{x:Bind ViewModel.CycleIndex, Mode=TwoWay}"
+            MaxColumns="3">
+            <x:String>3개월</x:String>
+            <x:String>6개월</x:String>
+            <x:String>1년</x:String>
+        </RadioButtons>
+
+        <TextBlock
+            Grid.Row="5"
             Text="{x:Bind ViewModel.PlannedSellSummary, Mode=OneWay}"
             Style="{StaticResource BodyStrongTextBlockStyle}"
             Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
 
-        <Border Grid.Row="5" Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="12,8">
+        <Border Grid.Row="6" Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="12,8">
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="상품명" Width="{StaticResource ColName}" Style="{StaticResource SellHeaderTextStyle}" />
                 <TextBlock Text="적립금" Width="{StaticResource ColCurrentValue}" Style="{StaticResource SellHeaderTextStyle}" />
@@ -74,7 +85,7 @@
         </Border>
 
         <ListView
-            Grid.Row="6"
+            Grid.Row="7"
             ItemsSource="{x:Bind ViewModel.OwnedItems, Mode=OneWay}"
             SelectionMode="None"
             IsItemClickEnabled="False">

@@ -99,6 +99,15 @@ public static class PdfExporter
                         text.Span(date.ToString("yyyy년 M월 d일", CultureInfo.InvariantCulture));
                     }
                 }
+                text.Span(" · ");
+                text.Span("주기: ").Bold();
+                text.Span(account.RebalanceCycle switch
+                {
+                    RebalanceCycle.ThreeMonths => "3개월",
+                    RebalanceCycle.SixMonths => "6개월",
+                    RebalanceCycle.OneYear => "1년",
+                    _ => "-",
+                });
             });
         });
     }
