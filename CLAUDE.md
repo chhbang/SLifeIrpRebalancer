@@ -66,12 +66,19 @@ dotnet build PensionCompass\PensionCompass.csproj `
     -p:AppxBundle=Always `
     -p:AppxBundlePlatforms=x64 `
     -p:UapAppxPackageBuildMode=SideloadOnly `
-    -p:AppxPackageDir=PensionCompass\AppPackages\
+    -p:AppxPackageDir=AppPackages\
 ```
 
-산출물은 `PensionCompass\AppPackages\PensionCompass_<version>_Test\` 안에 `.msixbundle` + `.cer` + `Add-AppDevPackage.ps1`로 떨어집니다 — VS 마법사 결과와 동일합니다. 다른 PC에 설치할 땐 `.cer`을 "신뢰할 수 있는 사람" 저장소에 등록한 뒤 `.msixbundle`을 더블클릭하거나, 받은 PC에서 `Add-AppDevPackage.ps1`을 관리자 PowerShell로 돌리면 됩니다.
+산출물은 `PensionCompass\AppPackages\PensionCompass_<version>_Test\` 안에 `.msixbundle` + `.cer`로 떨어집니다. 다른 PC에 설치할 땐 `.cer`을 "신뢰할 수 있는 사람" 저장소에 등록한 뒤 `.msixbundle`을 더블클릭하면 됩니다.
 
-CLI 경로는 CI/스크립트화에 유리하지만, **자동 업데이트(.appinstaller) 설정은 마법사에서만 잡을 수 있습니다** — 자동 업데이트가 필요하면 마법사를 쓰세요. 인증서가 아직 없는 새 클론에서 CLI를 처음 돌리려면 인증서 자체는 한 번 마법사로 만들어야 합니다 (.pfx는 git ignore).
+CLI 경로는 CI/스크립트화에 유리하지만 마법사와 비교하면 두 가지 차이가 있습니다:
+
+- **`Add-AppDevPackage.ps1` / `Install.ps1` 같은 설치 도우미 스크립트는 마법사에서만 생성됩니다.** 받는 PC에서 헬퍼로 자동 신뢰 등록까지 한 번에 시키고 싶다면 마법사를 쓰세요. CLI 산출물(.cer + .msixbundle)만으로도 수동 설치는 정상 동작합니다.
+- **자동 업데이트(.appinstaller) 설정도 마법사에서만 잡을 수 있습니다** — 자동 업데이트가 필요하면 마법사를 쓰세요.
+
+또 `AppxPackageDir`은 **csproj 디렉터리 기준 상대경로로 해석되는** 점에 주의 — csproj가 `PensionCompass\` 안에 있으므로 위 명령은 `AppPackages\`만 적어 리포 루트 기준 `PensionCompass\AppPackages\`에 떨어지게 합니다. 과거에 `PensionCompass\AppPackages\`로 적어두면 `PensionCompass\PensionCompass\AppPackages\`로 한 단계 더 깊어졌습니다.
+
+인증서가 아직 없는 새 클론에서 CLI를 처음 돌리려면 인증서 자체는 한 번 마법사로 만들어야 합니다 (.pfx는 git ignore).
 
 ## What the app does
 
