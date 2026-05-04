@@ -26,6 +26,9 @@
     <None Include="..\..\reference\퇴직연금 전체 상품 - 퇴직연금 - 삼성생명.html" Link="TestData\samsunglife.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\reference\적립금_수익률 조회- 퇴직연금 조회 - 퇴직연금 - MY삼성생명 - 삼성생명.html" Link="TestData\samsunglife_portfolio.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

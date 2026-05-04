@@ -18,10 +18,14 @@
         <x:Double x:Key="ColMaturity">80</x:Double>
         <x:Double x:Key="ColRiskGrade">110</x:Double>
         <x:Double x:Key="ColReturn">80</x:Double>
+        <!-- Aligns the first action button across the catalog/portfolio rows by giving both
+             section labels the same column width regardless of label text length. -->
+        <x:Double x:Key="ColSectionLabel">100</x:Double>
     </Page.Resources>
 
     <Grid Padding="32" RowSpacing="16">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -37,7 +41,8 @@
             TextWrapping="Wrap"
             Text="삼성생명 IRP 상품 목록 HTML을 불러와 원리금보장형 / 펀드 CSV로 변환합니다. 펀드 수익률 컬럼은 HTML 한 부에 1개 기간만 들어 있으므로, 모든 기간(1개월/3개월/6개월/1년/3년)을 채우려면 정렬을 바꿔가며 여러 번 저장해 가져와야 합니다." />
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12">
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+            <TextBlock Text="상품 카탈로그" VerticalAlignment="Center" Width="{StaticResource ColSectionLabel}" Style="{StaticResource BodyStrongTextBlockStyle}" />
             <Button
                 x:Name="LoadHtmlButton"
                 Content="HTML 불러오기 (덮어쓰기)"
@@ -68,7 +73,34 @@
                 VerticalAlignment="Center" />
         </StackPanel>
 
-        <StackPanel Grid.Row="3" Spacing="4">
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+            <TextBlock Text="내 계좌" VerticalAlignment="Center" Width="{StaticResource ColSectionLabel}" Style="{StaticResource BodyStrongTextBlockStyle}" />
+            <Button
+                x:Name="LoadPortfolioHtmlButton"
+                Content="HTML 불러오기 (덮어쓰기)"
+                Click="LoadPortfolioHtmlButton_Click"
+                Style="{StaticResource AccentButtonStyle}" />
+            <Button
+                x:Name="LoadPortfolioCsvButton"
+                Content="CSV 폴더에서 불러오기"
+                Click="LoadPortfolioCsvButton_Click" />
+            <Button
+                x:Name="SavePortfolioCsvButton"
+                Content="CSV 폴더로 저장"
+                Click="SavePortfolioCsvButton_Click"
+                IsEnabled="{x:Bind ViewModel.HasPortfolio, Mode=OneWay}" />
+            <Button
+                x:Name="PortfolioGuideButton"
+                Click="PortfolioGuideButton_Click"
+                ToolTipService.ToolTip="삼성생명 홈페이지에서 HTML을 받는 방법 보기">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE946;" />
+                    <TextBlock Text="안내" />
+                </StackPanel>
+            </Button>
+        </StackPanel>
+
+        <StackPanel Grid.Row="4" Spacing="4">
             <TextBlock
                 Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
                 Style="{StaticResource BodyTextBlockStyle}"
@@ -81,10 +113,15 @@
                 Text="{x:Bind ViewModel.SamsungLifeSummary, Mode=OneWay}"
                 Style="{StaticResource CaptionTextBlockStyle}"
                 Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+            <TextBlock
+                Text="{x:Bind ViewModel.PortfolioStatusMessage, Mode=OneWay}"
+                Style="{StaticResource BodyTextBlockStyle}"
+                TextWrapping="Wrap"
+                Margin="0,4,0,0" />
         </StackPanel>
 
         <TabView
-            Grid.Row="4"
+            Grid.Row="5"
             IsAddTabButtonVisible="False"
             CanDragTabs="False"
             CanReorderTabs="False"

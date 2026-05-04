@@ -16,6 +16,7 @@ namespace PensionCompass.ViewModels;
 public partial class DataPreparationViewModel : ObservableObject
 {
     private readonly SamsungLifeHtmlParser _parser = new();
+    private readonly SamsungLifePortfolioHtmlParser _portfolioParser = new();
 
     public ObservableCollection<PrincipalGuaranteedProduct> PrincipalGuaranteed { get; } = [];
     public ObservableCollection<FundRow> Funds { get; } = [];
@@ -34,6 +35,12 @@ public partial class DataPreparationViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isBusy;
+
+    [ObservableProperty]
+    private string _portfolioStatusMessage = "내 계좌 HTML을 불러오면 보유 상품과 합계가 자동 입력됩니다.";
+
+    [ObservableProperty]
+    private bool _hasPortfolio;
 
     public async Task ImportHtmlAsync(IReadOnlyList<string> filePaths, bool replaceExisting)
     {
@@ -132,7 +139,136 @@ public partial class DataPreparationViewModel : ObservableObject
     {
         if (AppState.Instance.Catalog is { } catalog)
             ApplyCatalog(catalog);
+        RefreshPortfolioStatus();
     }
+
+    /// <summary>
+    /// Parses the saved Samsung Life "적립금/수익률 조회" HTML and returns a snapshot.
+    /// The view is responsible for confirming overwrite (when an account already has data)
+    /// before applying the snapshot via <see cref="ApplyPortfolio"/>.
+    /// </summary>
+    public async Task<PortfolioSnapshot?> ParsePortfolioHtmlAsync(string filePath)
+    {
+        IsBusy = true;
+        try
+        {
+            var html = await File.ReadAllTextAsync(filePath);
+            var snapshot = await Task.Run(() => _portfolioParser.Parse(html));
+            PortfolioStatusMessage = $"불러올 보유 상품 {snapshot.Holdings.Count:N0}개, 총적립금 {Format(snapshot.TotalAmount)}원. 적용할까요?";
+            return snapshot;
+        }
+        catch (Exception ex)
+        {
+            PortfolioStatusMessage = $"내 계좌 HTML 오류: {ex.Message}";
+            return null;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task<PortfolioSnapshot?> ParsePortfolioCsvAsync(string folderPath)
+    {
+        IsBusy = true;
+        try
+        {
+            var snapshot = await Task.Run(() => PortfolioCsvLoader.Load(folderPath));
+            if (snapshot.Holdings.Count == 0 && snapshot.TotalAmount is null)
+            {
+                PortfolioStatusMessage = "선택한 폴더에 내 계좌 CSV가 없거나 비어 있습니다.";
+                return null;
+            }
+            PortfolioStatusMessage = $"불러올 보유 상품 {snapshot.Holdings.Count:N0}개, 총적립금 {Format(snapshot.TotalAmount)}원. 적용할까요?";
+            return snapshot;
+        }
+        catch (Exception ex)
+        {
+            PortfolioStatusMessage = $"내 계좌 CSV 오류: {ex.Message}";
+            return null;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    /// <summary>
+    /// Overwrites the current account's totals and OwnedItems with the snapshot.
+    /// Subscriber info (current age, lifelong-annuity flag, etc.) and rebalance settings are preserved
+    /// because those are user choices the parser doesn't know about.
+    /// </summary>
+    public void ApplyPortfolio(PortfolioSnapshot snapshot)
+    {
+        var account = AppState.Instance.Account;
+
+        // Totals: only overwrite when the snapshot actually has a value, so a CSV with blank
+        // totals doesn't clobber numbers the user already typed.
+        if (snapshot.TotalAmount is { } total) account.TotalAmount = total;
+        if (snapshot.DepositAmount is { } deposit) account.DepositAmount = deposit;
+        if (snapshot.ProfitAmount is { } profit) account.ProfitAmount = profit;
+
+        // Holdings: replace wholesale. The previous IsSellable flags are reset to the model
+        // default (true); the user marks locked rows again on the SellTargets screen.
+        account.OwnedItems.Clear();
+        foreach (var h in snapshot.Holdings)
+            account.OwnedItems.Add(h);
+
+        AppState.Instance.SaveAccount();
+        PortfolioStatusMessage = $"적용 완료. 보유 상품 {snapshot.Holdings.Count:N0}개, 총적립금 {Format(snapshot.TotalAmount)}원.";
+        RefreshPortfolioStatus();
+    }
+
+    public async Task SavePortfolioCsvAsync(string folderPath)
+    {
+        var account = AppState.Instance.Account;
+        var snapshot = new PortfolioSnapshot(
+            TotalAmount: account.TotalAmount > 0 ? account.TotalAmount : null,
+            DepositAmount: account.DepositAmount,
+            ProfitAmount: account.ProfitAmount,
+            Holdings: account.OwnedItems.Select(Clone).ToList());
+
+        IsBusy = true;
+        try
+        {
+            await Task.Run(() => PortfolioCsvWriter.Write(folderPath, snapshot));
+            PortfolioStatusMessage = $"내 계좌 CSV 저장 완료: {folderPath}";
+        }
+        catch (Exception ex)
+        {
+            PortfolioStatusMessage = $"내 계좌 CSV 저장 오류: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public bool AccountHasUserData()
+    {
+        var account = AppState.Instance.Account;
+        return account.TotalAmount > 0 || account.OwnedItems.Count > 0;
+    }
+
+    private void RefreshPortfolioStatus()
+    {
+        var account = AppState.Instance.Account;
+        HasPortfolio = account.TotalAmount > 0 || account.OwnedItems.Count > 0;
+    }
+
+    private static OwnedProductModel Clone(OwnedProductModel src) => new()
+    {
+        ProductName = src.ProductName,
+        CurrentValue = src.CurrentValue,
+        ReturnRate = src.ReturnRate,
+        AnnualizedReturn = src.AnnualizedReturn,
+        InvestedDays = src.InvestedDays,
+        TotalShares = src.TotalShares,
+        IsSellable = src.IsSellable,
+    };
+
+    private static string Format(decimal? value)
+        => value.HasValue ? value.Value.ToString("N0") : "—";
 
     public void ResetCatalog()
     {
