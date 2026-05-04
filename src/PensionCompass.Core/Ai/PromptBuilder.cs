@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using PensionCompass.Core.History;
 using PensionCompass.Core.Models;
 
 namespace PensionCompass.Core.Ai;
@@ -7,7 +8,8 @@ namespace PensionCompass.Core.Ai;
 public sealed record PromptInput(
     ProductCatalog? Catalog,
     AccountStatusModel Account,
-    string UserAdditionalQuery);
+    string UserAdditionalQuery,
+    RebalanceSession? PriorSession = null);
 
 public sealed record PromptOutput(string SystemPrompt, string UserPrompt);
 
@@ -35,6 +37,7 @@ public static class PromptBuilder
         AppendAccountSummary(sb, input.Account);
         AppendHoldings(sb, input.Account.OwnedItems);
         AppendCatalog(sb, input.Catalog);
+        AppendPriorSession(sb, input.PriorSession);
         AppendUserAddendum(sb, input.UserAdditionalQuery);
         AppendInstructions(sb);
         return new PromptOutput(SystemPromptText, sb.ToString().TrimEnd());
@@ -239,6 +242,35 @@ public static class PromptBuilder
             sb.Append(" | ").Append(GetReturnCell(f, ReturnPeriod.Year3));
             sb.AppendLine(" |");
         }
+        sb.AppendLine();
+    }
+
+    private static void AppendPriorSession(StringBuilder sb, RebalanceSession? prior)
+    {
+        if (prior is null) return;
+
+        sb.AppendLine("## 직전 리밸런싱 회차 (참고용)");
+        sb.AppendLine("- 사용자가 이전 회차의 리밸런싱 추천을 함께 검토하기 위해 첨부했습니다. 그때의 입력과 추천을 참고하여 다음을 고려해주세요:");
+        sb.AppendLine("  - 그 사이 시장 상황 변화로 그때의 추천 방향을 유지/조정/뒤집어야 하는지");
+        sb.AppendLine("  - 보유 자산이 그때 대비 어떻게 달라졌는지 (사용자가 그대로 실행했는지, 부분만 했는지, 아니면 전혀 다르게 했는지는 명시되지 않을 수 있음)");
+        sb.AppendLine("  - 일관성 있는 장기 전략을 유지하되, 단순히 이전 추천을 답습하지는 말고 현 시점에서 다시 검토할 것");
+        sb.AppendLine();
+        sb.AppendLine($"- 시점: {prior.Meta.Timestamp.ToLocalTime():yyyy년 M월 d일 HH:mm}");
+        sb.AppendLine($"- 그때 사용한 AI: {prior.Meta.ProviderName} ({prior.Meta.ModelId}, 사고 수준 {prior.Meta.ThinkingLevel.ToKoreanLabel()})");
+        sb.AppendLine($"- 그때 총 적립금: {Won(prior.Meta.TotalAmount)} / 보유 상품 {prior.Meta.HoldingsCount}개");
+        if (!string.IsNullOrWhiteSpace(prior.UserAdditionalQuery))
+        {
+            sb.AppendLine("- 그때 사용자 추가 요구사항:");
+            foreach (var line in prior.UserAdditionalQuery.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var trimmed = line.TrimEnd('\r').Trim();
+                if (trimmed.Length == 0) continue;
+                sb.AppendLine($"  > {trimmed}");
+            }
+        }
+        sb.AppendLine();
+        sb.AppendLine("### 그때 받은 추천 (마크다운 원문)");
+        sb.AppendLine(prior.RecommendationMarkdown.TrimEnd());
         sb.AppendLine();
     }
 

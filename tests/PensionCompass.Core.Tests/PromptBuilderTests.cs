@@ -1,4 +1,5 @@
 using PensionCompass.Core.Ai;
+using PensionCompass.Core.History;
 using PensionCompass.Core.Models;
 
 namespace PensionCompass.Core.Tests;
@@ -269,5 +270,43 @@ public class PromptBuilderTests
 
         Assert.Contains("## 사용자 추가 요구사항", output.UserPrompt);
         Assert.Contains("(없음)", output.UserPrompt);
+    }
+
+    [Fact]
+    public void Build_NoPriorSession_OmitsPriorSection()
+    {
+        var output = PromptBuilder.Build(new PromptInput(null, SampleAccount(), "", PriorSession: null));
+
+        Assert.DoesNotContain("## 직전 리밸런싱", output.UserPrompt);
+    }
+
+    [Fact]
+    public void Build_WithPriorSession_EmbedsTimestampAiAndMarkdown()
+    {
+        var prior = new RebalanceSession(
+            Meta: new RebalanceSessionMeta(
+                Timestamp: new DateTime(2026, 2, 4, 10, 0, 0, DateTimeKind.Local),
+                ProviderName: "Claude",
+                ModelId: "claude-opus-4-7",
+                ThinkingLevel: ThinkingLevel.High,
+                HoldingsCount: 5,
+                TotalAmount: 150_000_000m,
+                CatalogPrincipalGuaranteedCount: 0,
+                CatalogFundCount: 0),
+            Account: new AccountStatusModel(),
+            UserAdditionalQuery: "그때는 안정 자산 비중을 늘려달라고 했음",
+            RecommendationMarkdown: "# 그때 받은 추천\n\n매도 후보: 펀드 X 30%");
+
+        var output = PromptBuilder.Build(new PromptInput(null, SampleAccount(), "", PriorSession: prior));
+
+        Assert.Contains("## 직전 리밸런싱", output.UserPrompt);
+        Assert.Contains("2026년 2월 4일", output.UserPrompt);
+        Assert.Contains("Claude (claude-opus-4-7", output.UserPrompt);
+        // Prior user query gets quoted as a blockquote line so the AI can distinguish then-input.
+        Assert.Contains("> 그때는 안정 자산 비중을 늘려달라고 했음", output.UserPrompt);
+        // Recommendation markdown is embedded verbatim so the AI can read what was said.
+        Assert.Contains("매도 후보: 펀드 X 30%", output.UserPrompt);
+        // Guidance must be present so the AI doesn't simply parrot the prior recommendation.
+        Assert.Contains("일관성 있는 장기 전략을 유지하되, 단순히 이전 추천을 답습하지는 말고", output.UserPrompt);
     }
 }

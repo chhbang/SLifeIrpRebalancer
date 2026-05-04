@@ -18,15 +18,30 @@ public sealed partial class AiRebalanceView : Page
     {
         InitializeComponent();
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+        ViewModel.RefreshHistoryEntries();
         Loaded += AiRebalanceView_Loaded;
     }
 
     private async void AiRebalanceView_Loaded(object sender, RoutedEventArgs e)
     {
+        // Refresh again on each page load — the user may have come back from the History
+        // screen after deleting/saving an entry, so the combo should reflect that.
+        ViewModel.RefreshHistoryEntries();
+
         // CoreWebView2 must be initialized before NavigateToString works.
         await ResponseWebView.EnsureCoreWebView2Async();
         if (ViewModel.HasResponse)
             UpdateWebViewContent(ViewModel.AiResponse);
+    }
+
+    private void ClearPriorSessionButton_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.SelectedPriorEntry = null;
+    }
+
+    private void SaveHistoryButton_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.SaveCurrentResponseToHistory();
     }
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)

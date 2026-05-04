@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository status
 
-All five screens are functional end-to-end: HTML/CSV import → account input → sell-decision → AI proposal → PDF export. State (account + catalog + settings) auto-persists across launches. The Core library is covered by 27 xUnit tests against the real reference HTML.
+All six screens are functional end-to-end: HTML/CSV import → account input → sell-decision → AI proposal → PDF export, plus a 이력 (history) screen for browsing past sessions. State (account + catalog + settings) auto-persists across launches; AI recommendations save explicitly per the user opt-in policy. With an optional sync folder configured, state and history are also mirrored across PCs via the user's own cloud client (OneDrive / Google Drive desktop / Dropbox). The Core library is covered by 50+ xUnit tests against the real reference HTML.
 
 Design docs are in Korean. Source of truth: [doc/PensionCompass_상세_설계서.md](doc/PensionCompass_상세_설계서.md) (Gemini-generated from the user's brief in [doc/prompt.txt](doc/prompt.txt)). A real saved snapshot of the Samsung Life product page lives at [reference/퇴직연금 전체 상품 - 퇴직연금 - 삼성생명.html](reference/퇴직연금%20전체%20상품%20-%20퇴직연금%20-%20삼성생명.html) and is used by the parser tests. A sample of the kind of proposal the AI should return is in [doc/삼성생명 IRP 펀드 리밸런싱 전략 제안.md](doc/삼성생명%20IRP%20펀드%20리밸런싱%20전략%20제안.md) — useful as a target for prompt design and PDF layout.
 
@@ -16,15 +16,16 @@ The user's actual implementation choices have diverged from the original Gemini-
 PensionCompass.slnx                     # solution (new XML format, .NET 10 SDK)
 PensionCompass/                         # WinUI 3 app, net8.0-windows10.0.19041.0
 ├── App.xaml{.cs}                           # entry point — sets QuestPDF Community license, instantiates MainWindow
-├── MainWindow.xaml{.cs}                    # NavigationView shell with 5 menu items + Frame
-├── Views/                                  # one Page per screen (Settings, DataPreparation, MyAccount, SellTargets, AiRebalance)
+├── MainWindow.xaml{.cs}                    # NavigationView shell with 6 menu items + Frame
+├── Views/                                  # one Page per screen (Settings, DataPreparation, MyAccount, SellTargets, AiRebalance, History, About)
 ├── ViewModels/                             # one ObservableObject per screen + row VMs (FundRow, OwnedProductRow, SellTargetsRow)
-├── Services/                               # AppState (singleton), StateStore (JSON persist), SettingsService (LocalSettings), WindowHelper (HWND interop)
+├── Services/                               # AppState (singleton), StateStore (JSON persist + sync mirroring), SettingsService (LocalSettings + PasswordVault), WindowHelper (HWND interop)
 └── Converters/                             # WonFormatConverter (₩N0), BoolToVisibilityConverter
 src/PensionCompass.Core/                # net8.0 class library (UI-free)
-├── Models/                                 # records + enums (AccountStatusModel, OwnedProductModel, FundProduct, ProductCatalog, ReturnPeriod, RebalanceTiming)
-├── Parsing/                                # SamsungLifeHtmlParser, AssetManagerResolver, ProductCatalogMerger
-├── Csv/                                    # CsvWriter (write spec CSVs), CsvCatalogLoader (read them back)
+├── Models/                                 # records + enums (AccountStatusModel, OwnedProductModel, FundProduct, ProductCatalog, ReturnPeriod, RebalanceTiming, PortfolioSnapshot)
+├── Parsing/                                # SamsungLifeHtmlParser (catalog), SamsungLifePortfolioHtmlParser (my account), AssetManagerResolver, ProductCatalogMerger
+├── Csv/                                    # CsvWriter / CsvCatalogLoader (catalog), PortfolioCsvWriter / PortfolioCsvLoader (my account)
+├── History/                                # RebalanceSession + RebalanceHistoryStore (per-session JSON archive)
 ├── Ai/                                     # IAiClient + AnthropicClient, OpenAiClient, GeminiClient, AiClientFactory, PromptBuilder
 ├── Markdown/MarkdownToHtml.cs              # Markdig → HTML for WebView2 display
 └── Pdf/                                    # PdfReport (data) + PdfExporter (QuestPDF, walks Markdig AST)
@@ -39,7 +40,7 @@ The `Core` library is deliberately framework-free — parser, CSV, AI clients, p
 # Restore + build everything (Core, Tests, WinUI app)
 dotnet build PensionCompass.slnx -p:Platform=x64
 
-# Run all 27 unit tests — preferred for fast iteration on Core
+# Run all unit tests — preferred for fast iteration on Core
 dotnet test tests/PensionCompass.Core.Tests/PensionCompass.Core.Tests.csproj
 
 # Run the WinUI app
@@ -133,19 +134,27 @@ Live in `src/PensionCompass.Core/Models/`:
 
 ## Persistence
 
-Three independent stores keep state across launches; the Reset buttons are screen-scoped on purpose so the user can wipe one slice without touching the others.
+Multiple independent stores keep state across launches; the Reset buttons are screen-scoped on purpose so the user can wipe one slice without touching the others. Each store has a different sensitivity profile — non-secret prefs go to LocalSettings, account/catalog state mirrors to the optional sync folder for cross-device pickup, and API keys live in PasswordVault and never touch disk.
 
 | Slice | Backing store | Path | Save trigger | Reset trigger |
 | --- | --- | --- | --- | --- |
-| AI provider, per-provider API keys, per-provider model id, thinking level | `Windows.Storage.ApplicationData.LocalSettings` | per-user package settings | every property setter (immediate) | manual edit on Settings page (no reset button) |
-| Catalog | `StateStore` → JSON in `LocalFolder/catalog.json` | `%LOCALAPPDATA%\Packages\<pfn>\LocalState\` | `AppState.Catalog` setter via `OnCatalogChanged` partial method | "카탈로그 초기화" button on Data Preparation (with ContentDialog confirm) |
-| Account (totals, subscriber info incl. lifelong-annuity flag, OwnedItems with IsSellable, RebalanceTiming, ExecutionDate) | `StateStore` → JSON in `LocalFolder/account.json` | same | every VM mutation calls `AppState.Instance.SaveAccount()` (My Account VM + Sell Targets VM, including row PropertyChanged) | "계좌 정보 초기화" button on My Account (with ContentDialog confirm) |
+| AI provider, per-provider model id, thinking level, sync folder path | `Windows.Storage.ApplicationData.LocalSettings` | per-user package settings | every property setter (immediate) | manual edit on Settings page (no reset button) |
+| Per-provider API keys (Claude/Gemini/GPT) | `Windows.Security.Credentials.PasswordVault` | OS credential vault, encrypted with user logon credentials | property setter via `WriteVault()` | clear via Settings PasswordBox |
+| Catalog | `StateStore` → JSON in `LocalFolder/catalog.json`; mirrored to `<syncFolder>/catalog.json` when sync configured | `%LOCALAPPDATA%\Packages\<pfn>\LocalState\` (+ sync folder) | `AppState.Catalog` setter via `OnCatalogChanged` partial method | "카탈로그 초기화" button on Data Preparation (with ContentDialog confirm) |
+| Account (totals, subscriber info incl. lifelong-annuity flag, OwnedItems with IsSellable, RebalanceTiming, ExecutionDate) | `StateStore` → JSON in `LocalFolder/account.json`; mirrored to sync folder | same | every VM mutation calls `AppState.Instance.SaveAccount()` (My Account VM + Sell Targets VM, including row PropertyChanged) | "계좌 정보 초기화" button on My Account (with ContentDialog confirm) |
+| Rebalance history (per-session JSON: input snapshot + AI markdown response) | `RebalanceHistoryStore` → `<syncFolder or LocalState>\History\<timestamp>_<provider>.json` | one file per saved session | **explicit** "이력에 저장" button on AI Rebalance — not auto-saved, because users typically iterate across multiple AI/model combos before keeping one | "삭제" button per row on the 이력 screen (with ContentDialog confirm) |
 
-`AppState`'s constructor runs a one-shot migration that moves the legacy `RestrictToSamsungLifeForLifelongAnnuity` value out of LocalSettings (where earlier builds kept it) and into `AccountStatusModel.WantsLifelongAnnuity`, then drops the LocalSettings entry — so existing users keep their preference after the move.
+**Sync folder mirroring** (StateStore): when `Settings.SyncFolder` is non-empty, every save writes to BOTH `LocalState` and the sync folder, and every load picks whichever copy has the newer mtime. This is what makes cross-device handoff work without explicit "open file" UI — PC1 saves → cloud client uploads → PC2's sync folder copy ages newer than its LocalState → PC2's next launch loads the cloud version. The provider lookup is `Func<string?>` rather than a captured value so changing the SyncFolder setting takes effect without restarting the app. Mirror writes are best-effort: a locked/offline sync folder doesn't block LocalState progress.
 
-`AppState.Instance` is a process-wide singleton that loads both snapshots in its constructor. Catalog round-trips through a private DTO (`CatalogDto` / `FundProductDto`) inside `StateStore.cs` because `IReadOnlyList<T>` and `Dictionary<ReturnPeriod, string>` don't deserialize cleanly through System.Text.Json defaults. Best-effort I/O — corrupt JSON snapshots are silently ignored on load and the app starts fresh, rather than crashing.
+**History save policy is explicit, not auto** — the user's own answer to "should this auto-save?" was no, because it's normal to run the same input through multiple providers/models before deciding which recommendation to keep. The "이력에 저장" button on AI Rebalance is the only entry point that writes a session file. Listing scans BOTH `<LocalState>\History\` and `<syncFolder>\History\` (when configured) and dedupes by canonical path, so a user changing the SyncFolder setting later doesn't appear to lose old history.
 
-When wiring a new VM that mutates `AppState.Account`, remember to call `AppState.Instance.SaveAccount()` after the mutation. Catalog is automatic.
+**HTML imports are never persisted anywhere** — they're parsed in-memory and the file path isn't kept. This is intentional because the raw HTML carries subscriber name + account number even though the parser ignores those areas.
+
+`AppState`'s constructor runs two one-shot migrations: lifelong-annuity flag moves from LocalSettings to `AccountStatusModel.WantsLifelongAnnuity`, and any plaintext API keys still in LocalSettings (from builds before v1.0.4) sweep into PasswordVault. Both migrations are idempotent.
+
+`AppState.Instance` is a process-wide singleton that loads both Account and Catalog in its constructor by passing `Settings.SyncFolder` to `StateStore` via a lazy provider. Catalog round-trips through a private DTO (`CatalogDto` / `FundProductDto`) inside `StateStore.cs` because `IReadOnlyList<T>` and `Dictionary<ReturnPeriod, string>` don't deserialize cleanly through System.Text.Json defaults. Best-effort I/O — corrupt JSON snapshots are silently ignored on load and the app starts fresh, rather than crashing.
+
+When wiring a new VM that mutates `AppState.Account`, remember to call `AppState.Instance.SaveAccount()` after the mutation. Catalog is automatic. History is opt-in via the AI Rebalance VM's `SaveCurrentResponseToHistory()`.
 
 ## Working notes
 

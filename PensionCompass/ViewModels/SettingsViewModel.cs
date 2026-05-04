@@ -82,4 +82,20 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Optional path the user picks (typically a OneDrive / Google Drive desktop folder).
+    /// Empty string means "no sync — LocalState only". Trim whitespace on set so the
+    /// StateStore's IsNullOrWhiteSpace check works as expected.
+    /// </summary>
+    public string SyncFolder
+    {
+        get => Settings.SyncFolder;
+        set
+        {
+            var clean = (value ?? string.Empty).Trim();
+            if (Settings.SyncFolder == clean) return;
+            Settings.SyncFolder = clean;
+            OnPropertyChanged();
+        }
+    }
 }

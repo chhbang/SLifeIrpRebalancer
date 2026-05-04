@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls;
 using PensionCompass.Core.Ai;
 using PensionCompass.Services;
 using PensionCompass.ViewModels;
+using Windows.Storage.Pickers;
 
 namespace PensionCompass.Views;
 
@@ -134,6 +135,21 @@ public sealed partial class SettingsView : Page
             progress.IsIndeterminate = false;
             progress.Visibility = Visibility.Collapsed;
         }
+    }
+
+    private async void PickSyncFolderButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (App.Window is null) return;
+        var picker = new FolderPicker { SuggestedStartLocation = PickerLocationId.Desktop };
+        picker.FileTypeFilter.Add("*");
+        WindowHelper.Initialize(picker, App.Window);
+        var folder = await picker.PickSingleFolderAsync();
+        if (folder is not null) ViewModel.SyncFolder = folder.Path;
+    }
+
+    private void ClearSyncFolderButton_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.SyncFolder = string.Empty;
     }
 
     private async System.Threading.Tasks.Task ShowErrorDialogAsync(string title, string message)

@@ -29,6 +29,7 @@ public sealed class SettingsService
     private const string GeminiModelKey = "GeminiModel";
     private const string GptModelKey = "GptModel";
     private const string ThinkingLevelKey = "ThinkingLevel";
+    private const string SyncFolderKey = "SyncFolder";
 
     /// <summary>Single resource string for all API key entries; provider name is stored as the userName field.</summary>
     private const string VaultResource = "PensionCompass.ApiKey";
@@ -105,6 +106,19 @@ public sealed class SettingsService
             ? lvl
             : ThinkingLevel.High;
         set => _store.Values[ThinkingLevelKey] = value.ToString();
+    }
+
+    /// <summary>
+    /// Optional folder path on the user's PC where account/catalog state is mirrored and
+    /// rebalance history sessions are saved. When the user points this at a folder backed
+    /// by their cloud sync client (OneDrive / Google Drive desktop / Dropbox), state and
+    /// history flow across PCs automatically. Empty string means "no sync, LocalState only".
+    /// API keys are never written here regardless of this setting — they stay in PasswordVault.
+    /// </summary>
+    public string SyncFolder
+    {
+        get => _store.Values[SyncFolderKey] as string ?? string.Empty;
+        set => _store.Values[SyncFolderKey] = value ?? string.Empty;
     }
 
     /// <summary>Returns the model id configured for the currently-selected provider.</summary>

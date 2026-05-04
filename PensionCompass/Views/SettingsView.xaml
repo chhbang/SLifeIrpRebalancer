@@ -111,6 +111,27 @@
                     TextWrapping="Wrap" />
             </StackPanel>
 
+            <StackPanel Spacing="6">
+                <TextBlock Text="동기화 폴더 (선택)" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0"
+                             Text="{x:Bind ViewModel.SyncFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             PlaceholderText="비워두면 동기화 안 함 (LocalState만 사용). 예: D:\OneDrive\PensionCompass" />
+                    <Button Grid.Column="1" Content="폴더 선택" Click="PickSyncFolderButton_Click" />
+                    <Button Grid.Column="2" Content="비우기" Click="ClearSyncFolderButton_Click" />
+                </Grid>
+                <TextBlock
+                    Text="이 폴더를 OneDrive / Google Drive 데스크톱 / Dropbox 등 클라우드 동기 폴더로 지정하면, 계좌 정보·상품 카탈로그·리밸런싱 이력이 다른 PC와 자동으로 공유됩니다. 폴더에는 보유 잔고·수익률 등 금융 정보가 포함되니 본인만 접근 가능한 위치를 선택하세요. API Key는 이 폴더에 절대 기록되지 않습니다."
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    TextWrapping="Wrap" />
+            </StackPanel>
+
         </StackPanel>
     </ScrollViewer>
 </Page>

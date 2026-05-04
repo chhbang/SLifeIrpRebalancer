@@ -16,6 +16,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -27,7 +28,24 @@
             TextWrapping="Wrap"
             Text="환경 설정의 AI 공급자/API Key, 상품 데이터 준비의 카탈로그, 내 계좌 정보의 보유 상품, 매도 대상 화면의 매도 정책·실행 시점을 종합하여 AI에게 리밸런싱 제안을 받습니다." />
 
-        <StackPanel Grid.Row="2" Spacing="4">
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+            <TextBlock Text="이전 회차 참고" VerticalAlignment="Center" Style="{StaticResource BodyStrongTextBlockStyle}" />
+            <ComboBox
+                x:Name="PriorSessionCombo"
+                Width="420"
+                ItemsSource="{x:Bind ViewModel.AvailableHistory, Mode=OneWay}"
+                SelectedItem="{x:Bind ViewModel.SelectedPriorEntry, Mode=TwoWay}"
+                DisplayMemberPath="DisplayLabel"
+                PlaceholderText="(선택 안 함 — 이번 회차만 참고)" />
+            <Button Content="해제" Click="ClearPriorSessionButton_Click"
+                    ToolTipService.ToolTip="이전 회차 참고 해제" />
+            <TextBlock Text="{x:Bind ViewModel.PriorSessionDescription, Mode=OneWay}"
+                       VerticalAlignment="Center"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       Style="{StaticResource CaptionTextBlockStyle}" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="3" Spacing="4">
             <TextBlock Text="추가 요구사항 (선택)" Style="{StaticResource BodyStrongTextBlockStyle}" />
             <TextBox
                 Text="{x:Bind ViewModel.UserQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -37,7 +55,7 @@
                 PlaceholderText="예: '이란 전쟁 상황을 반영해주세요', '안정 자산 비중을 더 높여주세요' 등" />
         </StackPanel>
 
-        <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
             <Button
                 x:Name="GenerateButton"
                 Content="포트폴리오 제안 받기"
@@ -48,6 +66,12 @@
                 x:Name="PreviewPromptButton"
                 Content="프롬프트 미리보기"
                 Click="PreviewPromptButton_Click" />
+            <Button
+                x:Name="SaveHistoryButton"
+                Content="이력에 저장"
+                Click="SaveHistoryButton_Click"
+                IsEnabled="{x:Bind ViewModel.CanSaveHistory, Mode=OneWay}"
+                ToolTipService.ToolTip="이번 회차의 입력과 추천 결과를 동기화 폴더(또는 LocalState)의 History\에 보관합니다" />
             <Button
                 x:Name="ExportPdfButton"
                 Content="PDF로 내보내기"
@@ -60,13 +84,13 @@
         </StackPanel>
 
         <TextBlock
-            Grid.Row="4"
+            Grid.Row="5"
             Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
             Style="{StaticResource BodyTextBlockStyle}"
             TextWrapping="Wrap" />
 
         <HyperlinkButton
-            Grid.Row="5"
+            Grid.Row="6"
             Visibility="{x:Bind ViewModel.HasExportedPdf, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
             Click="OpenExportedPdfButton_Click"
             Content="{x:Bind ViewModel.LastExportedPdfPath, Mode=OneWay}"
@@ -75,7 +99,7 @@
             Padding="0,4" />
 
         <Border
-            Grid.Row="6"
+            Grid.Row="7"
             Background="White"
             CornerRadius="4"
             BorderThickness="1"
