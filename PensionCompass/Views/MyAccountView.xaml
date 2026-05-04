@@ -19,7 +19,6 @@
         <x:Double x:Key="ColAction">60</x:Double>
         <Style x:Key="OwnedHeaderTextStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyStrongTextBlockStyle}">
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Margin" Value="0,0,8,0" />
         </Style>
     </Page.Resources>
 
@@ -165,11 +164,11 @@
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="상품명" Width="{StaticResource ColName}" Style="{StaticResource OwnedHeaderTextStyle}" />
                 <TextBlock Text="적립금 *" Width="{StaticResource ColCurrentValue}" Style="{StaticResource OwnedHeaderTextStyle}" />
+                <TextBlock Text="삭제" Width="{StaticResource ColAction}" Style="{StaticResource OwnedHeaderTextStyle}" HorizontalTextAlignment="Center" />
                 <TextBlock Text="수익률(%)" Width="{StaticResource ColReturn}" Style="{StaticResource OwnedHeaderTextStyle}" />
                 <TextBlock Text="연환산(%)" Width="{StaticResource ColAnnualized}" Style="{StaticResource OwnedHeaderTextStyle}" />
                 <TextBlock Text="운용일수" Width="{StaticResource ColDays}" Style="{StaticResource OwnedHeaderTextStyle}" />
                 <TextBlock Text="좌수" Width="{StaticResource ColShares}" Style="{StaticResource OwnedHeaderTextStyle}" />
-                <TextBlock Text="" Width="{StaticResource ColAction}" />
             </StackPanel>
         </Border>
 
@@ -200,6 +199,14 @@
                             Value="{x:Bind CurrentValue, Mode=TwoWay}"
                             SpinButtonPlacementMode="Hidden"
                             AcceptsExpression="False" />
+                        <Button
+                            Width="{StaticResource ColAction}"
+                            Click="DeleteRow_Click"
+                            Tag="{x:Bind}"
+                            Background="Transparent"
+                            ToolTipService.ToolTip="이 보유 상품을 목록에서 삭제">
+                            <SymbolIcon Symbol="Delete" />
+                        </Button>
                         <Grid Width="{StaticResource ColReturn}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -242,13 +249,6 @@
                             Value="{x:Bind TotalShares, Mode=TwoWay}"
                             SpinButtonPlacementMode="Hidden"
                             AcceptsExpression="False" />
-                        <Button
-                            Width="{StaticResource ColAction}"
-                            Click="DeleteRow_Click"
-                            Tag="{x:Bind}"
-                            Background="Transparent">
-                            <SymbolIcon Symbol="Delete" />
-                        </Button>
                     </StackPanel>
                 </DataTemplate>
             </ListView.ItemTemplate>

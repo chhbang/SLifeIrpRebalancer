@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -147,17 +148,30 @@ public sealed partial class MyAccountViewModel : ObservableObject
 
     public IEnumerable<string> FilterProductNames(string query)
     {
-        if (string.IsNullOrWhiteSpace(query)) return AllProductNames.Take(20);
-        return AllProductNames
-            .Where(name => name.Contains(query, System.StringComparison.OrdinalIgnoreCase))
+        var existing = new HashSet<string>(
+            OwnedItems.Select(r => r.ProductName.Trim()),
+            StringComparer.OrdinalIgnoreCase);
+        var pool = AllProductNames.Where(name => !existing.Contains(name.Trim()));
+        if (string.IsNullOrWhiteSpace(query)) return pool.Take(20);
+        return pool
+            .Where(name => name.Contains(query, StringComparison.OrdinalIgnoreCase))
             .Take(20);
     }
 
-    public void AddOwnedProduct(string productName)
+    /// <summary>
+    /// Adds the given product to the holdings list. Returns false if the input is blank or
+    /// a holding with the same name (case-insensitive) already exists — duplicate adds are
+    /// rejected because the AI prompt and per-row IsSellable flag both key off product name.
+    /// </summary>
+    public bool AddOwnedProduct(string productName)
     {
-        if (string.IsNullOrWhiteSpace(productName)) return;
-        var model = new OwnedProductModel { ProductName = productName.Trim() };
+        if (string.IsNullOrWhiteSpace(productName)) return false;
+        var trimmed = productName.Trim();
+        if (OwnedItems.Any(r => string.Equals(r.ProductName.Trim(), trimmed, StringComparison.OrdinalIgnoreCase)))
+            return false;
+        var model = new OwnedProductModel { ProductName = trimmed };
         OwnedItems.Add(new OwnedProductRow(model));
+        return true;
     }
 
     public void RemoveOwnedProduct(OwnedProductRow row)

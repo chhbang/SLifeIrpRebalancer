@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using PensionCompass.ViewModels;
@@ -20,20 +21,35 @@ public sealed partial class MyAccountView : Page
         sender.ItemsSource = ViewModel.FilterProductNames(sender.Text).ToList();
     }
 
-    private void ProductSearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+    private async void ProductSearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
     {
         var name = args.ChosenSuggestion as string ?? args.QueryText;
         if (string.IsNullOrWhiteSpace(name)) return;
-        ViewModel.AddOwnedProduct(name);
+        var added = ViewModel.AddOwnedProduct(name);
         sender.Text = string.Empty;
+        if (!added) await ShowDuplicateMessageAsync(name);
     }
 
-    private void AddButton_Click(object sender, RoutedEventArgs e)
+    private async void AddButton_Click(object sender, RoutedEventArgs e)
     {
         var name = ProductSearchBox.Text;
         if (string.IsNullOrWhiteSpace(name)) return;
-        ViewModel.AddOwnedProduct(name);
+        var added = ViewModel.AddOwnedProduct(name);
         ProductSearchBox.Text = string.Empty;
+        if (!added) await ShowDuplicateMessageAsync(name);
+    }
+
+    private async Task ShowDuplicateMessageAsync(string productName)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "이미 추가된 상품",
+            Content = $"\"{productName.Trim()}\"은(는) 이미 보유 상품 목록에 있습니다. 같은 상품을 두 번 추가할 수 없으니, 기존 행의 적립금 등 값을 수정하거나 휴지통 아이콘으로 삭제 후 다시 추가하세요.",
+            CloseButtonText = "확인",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = XamlRoot,
+        };
+        await dialog.ShowAsync();
     }
 
     private void DeleteRow_Click(object sender, RoutedEventArgs e)
