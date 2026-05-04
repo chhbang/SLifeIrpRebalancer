@@ -103,16 +103,19 @@ dotnet build PensionCompass/PensionCompass.csproj -p:Platform=x64
 
 ## 데이터 저장 위치
 
-모든 사용자 데이터는 패키지된 앱의 per-user LocalState 폴더에 저장됩니다:
+사용자 데이터는 두 군데에 나누어 저장됩니다:
 
 ```text
 %LOCALAPPDATA%\Packages\<PackageFamilyName>\LocalState\
 ├── account.json   # 계좌 정보 + 보유 상품 + 매도 결정
 ├── catalog.json   # 임포트된 상품 카탈로그
-└── (LocalSettings) # API Key, 모델 ID, 사고 수준 등
+└── (LocalSettings) # 공급자 선택, 모델 ID, 사고 수준 등 비밀이 아닌 설정
+
+Windows 자격증명 보관소 (Windows.Security.Credentials.PasswordVault)
+└── PensionCompass.ApiKey × {Claude, Gemini, GPT}   # API Key 3개
 ```
 
-API Key는 평문으로 저장되니 공용 PC에서는 사용을 피해주세요. 개인 PC라면 Windows 사용자 격리 수준에서 안전합니다.
+API Key는 Windows가 사용자 로그인 자격증명으로 암호화해 보관소에 보관합니다. 같은 PC라도 다른 사용자 계정에서는 복호화할 수 없으며, 디스크를 통째로 가져가더라도 평문이 노출되지 않습니다. 다만 *같은 사용자 세션 안에서 실행되는 다른 프로그램*이 같은 WinRT API로 꺼내 가는 것까지는 막지 못하므로, 공용 PC에서는 여전히 사용을 피해주세요.
 
 ---
 
@@ -152,7 +155,7 @@ reference/                          # 실제 삼성생명 HTML 스냅샷 (테스
 
 - **WinUI 3 데이터그리드 미사용** — Windows App SDK 2.0 호환 DataGrid 패키지가 없어 `ListView` + 정렬된 컬럼 템플릿으로 대체. 기능상 문제는 없으나 정렬·필터링 같은 폴리시는 없음
 - **AI 모델 기본값** — 코드 내 `DefaultModel` 상수 (`claude-opus-4-7` / `gemini-2.5-pro` / `gpt-5`). 새 모델은 환경 설정 화면에서 직접 입력하거나 모델 목록 조회로 발견
-- **API Key 평문 저장** — `Windows.Storage.ApplicationData.LocalSettings`에 평문. 공용 PC 미권장. 추후 `Windows.Security.Credentials.PasswordVault` 마이그레이션 가능
+- **API Key 보관 한계** — `Windows.Security.Credentials.PasswordVault`에 사용자 계정으로 암호화 보관. 디스크 탈취·다른 사용자 계정 접근은 차단되지만, *같은 사용자 세션 안에서 실행되는* 정보탈취형 악성코드가 동일 WinRT API로 꺼내 가는 것까지는 막지 못함. 더 강한 보호가 필요하면 마스터 패스워드 기반 AES-GCM 방식이 후보 (매 실행 시 패스워드 입력 비용 발생)
 - **개인 사용 목적** — 단일 사용자, 단일 IRP 계좌를 가정. 공유 환경 / 다중 계좌는 고려되지 않음
 
 ---

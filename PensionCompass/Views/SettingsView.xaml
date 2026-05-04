@@ -48,7 +48,7 @@
                     <PasswordBox Grid.Row="2" Grid.Column="1" x:Name="GptApiKeyBox" PlaceholderText="sk-..." PasswordChanged="GptApiKeyBox_PasswordChanged" />
                 </Grid>
                 <TextBlock
-                    Text="공급자마다 별도의 API Key가 저장됩니다. 현재 선택된 공급자의 키만 사용됩니다. LocalSettings에 평문으로 저장되니 공용 PC에서는 사용을 피해주세요."
+                    Text="공급자마다 별도의 API Key가 저장되며, 현재 선택된 공급자의 키만 사용됩니다. API Key는 Windows 자격증명 보관소(PasswordVault)에 사용자 계정으로 암호화되어 보관됩니다. 다만 같은 사용자 세션 안에서 도는 다른 프로그램이 동일 API로 꺼내 가는 것까진 막지 못하니, 공용 PC에서는 여전히 사용을 피해주세요."
                     Style="{StaticResource CaptionTextBlockStyle}"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     TextWrapping="Wrap" />
